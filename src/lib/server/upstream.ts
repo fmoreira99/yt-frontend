@@ -54,6 +54,15 @@ const CREDENTIAL_VARS: Record<Service, string> = {
 const REQUEST_TIMEOUT_MS = 120_000; // Render free tarda 15-60 s en despertar
 const UPLOAD_TIMEOUT_MS = 30 * 60_000;
 
+// Render (plan gratuito) duerme el servicio tras 15 min sin uso y responde 502/503/504 mientras despierta (20-60 s).
+const WAKING_STATUSES = new Set([502, 503, 504]);
+const WAKE_RETRY_DELAY_MS = 6_000;
+const MAX_WAKE_RETRIES = 8;
+const HEALTH_DEADLINE_MS = 75_000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const isJson = (res: Response) => (res.headers.get('content-type') ?? '').includes('json');
+
 export const SERVICE_LABELS: Record<Service, string> = {
   extractor: 'yt-extractor-service',
   core: 'core-db-service',
@@ -119,7 +128,14 @@ function resolveTarget(service: Service): Target | Response {
 }
 
 /** Normaliza los distintos formatos de error de los 4 servicios a { code, message }. */
-function describeError(text: string, status: number): { code: string; message: string } {
+function describeError(text: string, status: number, label: string): { code: string; message: string } {
+  if (/^\s*</.test(text)) {
+    // HTML (página de error del proxy de Render): no se muestra tal cual.
+    return {
+      code: `HTTP_${status}`,
+      message: `${label} no está disponible (HTTP ${status}). Si estaba dormido, reintenta en unos segundos.`,
+    };
+  }
   try {
     const body = JSON.parse(text) as { error?: unknown; message?: unknown };
     const { error } = body;
@@ -151,30 +167,42 @@ export async function callUpstream(service: Service, path: string, options: Call
   const headers = new Headers(target.headers);
   if (options.contentType) headers.set('content-type', options.contentType);
 
-  const init: RequestInit & { duplex?: 'half' } = {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body ?? undefined,
-    signal: AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS),
-    cache: 'no-store',
-  };
-  if (options.body && typeof options.body !== 'string') init.duplex = 'half'; // body en streaming (subida de video)
+  const method = options.method ?? 'GET';
+  const deadline = Date.now() + (options.timeoutMs ?? REQUEST_TIMEOUT_MS);
+  const url = `${target.apiBase}/${path}${options.search ?? ''}`;
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${target.apiBase}/${path}${options.search ?? ''}`, init);
-  } catch (err) {
-    const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-    return errorResponse(
-      timedOut ? 504 : 502,
-      timedOut ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNREACHABLE',
-      timedOut
-        ? `${SERVICE_LABELS[service]} no respondió a tiempo (puede estar despertando; reintenta)`
-        : `No se pudo conectar con ${SERVICE_LABELS[service]}`,
-    );
+  let upstream!: Response;
+  let text!: string;
+  for (let attempt = 0; ; attempt++) {
+    const init: RequestInit & { duplex?: 'half' } = {
+      method,
+      headers,
+      body: options.body ?? undefined,
+      signal: AbortSignal.timeout(Math.max(1_000, deadline - Date.now())),
+      cache: 'no-store',
+    };
+    if (options.body && typeof options.body !== 'string') init.duplex = 'half'; // body en streaming (subida de video)
+
+    try {
+      upstream = await fetch(url, init);
+      text = await upstream.text();
+    } catch (err) {
+      const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+      return errorResponse(
+        timedOut ? 504 : 502,
+        timedOut ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNREACHABLE',
+        timedOut
+          ? `${SERVICE_LABELS[service]} no respondió a tiempo (puede estar despertando; reintenta)`
+          : `No se pudo conectar con ${SERVICE_LABELS[service]}`,
+      );
+    }
+
+    // Solo GET (idempotente): si el servicio está despertando (502/503/504 sin JSON), esperar y reintentar.
+    const waking = method === 'GET' && WAKING_STATUSES.has(upstream.status) && !isJson(upstream);
+    if (!waking || attempt >= MAX_WAKE_RETRIES || Date.now() + WAKE_RETRY_DELAY_MS >= deadline) break;
+    await sleep(WAKE_RETRY_DELAY_MS);
   }
 
-  const text = await upstream.text();
   if (upstream.status === 401 || upstream.status === 403) {
     // No propagar 401: el cliente lo interpretaría como "sesión caducada" y redirigiría al login.
     return errorResponse(
@@ -184,7 +212,7 @@ export async function callUpstream(service: Service, path: string, options: Call
     );
   }
   if (!upstream.ok) {
-    const { code, message } = describeError(text, upstream.status);
+    const { code, message } = describeError(text, upstream.status, SERVICE_LABELS[service]);
     const retryAfter = upstream.headers.get('retry-after');
     return errorResponse(upstream.status, code, message, retryAfter ? { 'retry-after': retryAfter } : undefined);
   }
@@ -217,18 +245,27 @@ export async function forward(service: Service, segments: string[], req: Request
 export async function checkHealth(service: Service): Promise<{ status: 'ok' | 'down' | 'not_configured'; latency_ms?: number; detail?: string }> {
   const target = resolveTarget(service);
   if (target instanceof Response) {
-    const notConfigured = service === 'youtube' && !env.youtubeUrl;
-    return { status: notConfigured ? 'not_configured' : 'down', detail: (await target.json()).error.message };
+    return { status: 'not_configured', detail: (await target.json()).error.message };
   }
+
+  // Un servicio dormido responde 502/503/504 al principio: se reintenta hasta que despierte o venza el plazo.
   const started = Date.now();
-  try {
-    const res = await fetch(`${target.origin}${target.healthPath}`, {
-      signal: AbortSignal.timeout(75_000),
-      cache: 'no-store',
-    });
-    const latency_ms = Date.now() - started;
-    return res.ok ? { status: 'ok', latency_ms } : { status: 'down', latency_ms, detail: `HTTP ${res.status}` };
-  } catch {
-    return { status: 'down', latency_ms: Date.now() - started, detail: 'Sin respuesta' };
+  const deadline = started + HEALTH_DEADLINE_MS;
+  let detail = 'Sin respuesta';
+  for (;;) {
+    try {
+      const res = await fetch(`${target.origin}${target.healthPath}`, {
+        signal: AbortSignal.timeout(Math.max(1_000, Math.min(25_000, deadline - Date.now()))),
+        cache: 'no-store',
+      });
+      if (res.ok) return { status: 'ok', latency_ms: Date.now() - started };
+      detail = `HTTP ${res.status}`;
+      if (!WAKING_STATUSES.has(res.status)) break;
+    } catch {
+      detail = 'Sin respuesta';
+    }
+    if (Date.now() + WAKE_RETRY_DELAY_MS >= deadline) break;
+    await sleep(WAKE_RETRY_DELAY_MS);
   }
+  return { status: 'down', latency_ms: Date.now() - started, detail: `${detail} tras reintentar` };
 }

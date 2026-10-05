@@ -26,7 +26,9 @@ function ServiceCard({ id, name, description, href }: (typeof SERVICES)[number])
       </div>
       <p className="muted">{description}</p>
       <div className="row-between">
-        <span className="small muted">{data?.detail ?? formatMs(data?.latency_ms)}</span>
+        <span className="small muted">
+          {loading ? 'Si estaba dormido, puede tardar hasta un minuto' : (data?.detail ?? formatMs(data?.latency_ms))}
+        </span>
         <Link href={href}>Abrir →</Link>
       </div>
     </Card>
