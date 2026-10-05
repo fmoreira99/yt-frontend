@@ -1,14 +1,14 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import Link from 'next/link';
 import { api, uploadYoutubeVideo } from '@/lib/api';
 import { useAction, useQuery } from '@/lib/hooks';
 import { formatDate, formatNumber } from '@/lib/format';
 import { Badge, Button, Card, Empty, ErrorBox, Field, PageHeader, Spinner, Tabs } from '@/components/ui';
 import type { YoutubeAccount } from '@/lib/types';
 
-type Tab = 'accounts' | 'upload' | 'stats' | 'analytics';
+type Tab = 'upload' | 'stats' | 'analytics';
 
 const isoDay = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 
@@ -26,41 +26,6 @@ function AccountSelect({ accounts, value, onChange }: { accounts: YoutubeAccount
         {accounts.map((a) => <option key={a.id} value={a.id}>{a.channelTitle}</option>)}
       </select>
     </Field>
-  );
-}
-
-function AccountsTab({ accounts, loading, onReload }: { accounts: YoutubeAccount[]; loading: boolean; onReload: () => void }) {
-  const connect = useAction(async () => {
-    const { data } = await api.youtubeAuthUrl();
-    window.location.href = data.url;
-  });
-  return (
-    <Card
-      title="Canales conectados"
-      actions={<Button variant="primary" size="sm" icon="play" loading={connect.loading} onClick={() => void connect.run()}>Conectar cuenta</Button>}
-    >
-      <ErrorBox message={connect.error} />
-      {loading && <Spinner label="Cargando…" />}
-      {!loading && accounts.length === 0 && (
-        <Empty icon="play" title="Ninguna cuenta conectada">Conecta tu canal con Google para subir videos y ver analíticas.</Empty>
-      )}
-      <div className="stack">
-        {accounts.map((a) => (
-          <div key={a.id} className="row" style={{ gap: 16 }}>
-            {a.thumbnailUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={a.thumbnailUrl} alt="" width={40} height={40} style={{ borderRadius: '50%' }} />
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600 }}>{a.channelTitle}</div>
-              <div className="small muted mono">{a.channelId}</div>
-            </div>
-            <span className="small muted">Conectada {formatDate(a.createdAt)}</span>
-          </div>
-        ))}
-      </div>
-      {accounts.length > 0 && <div style={{ marginTop: 16 }}><Button size="sm" variant="ghost" icon="refresh" onClick={onReload}>Actualizar</Button></div>}
-    </Card>
   );
 }
 
@@ -198,9 +163,8 @@ function AnalyticsTab({ accounts, accountId, setAccountId }: { accounts: Youtube
   );
 }
 
-function YoutubeContent() {
-  const params = useSearchParams();
-  const [tab, setTab] = useState<Tab>('accounts');
+export default function YoutubePage() {
+  const [tab, setTab] = useState<Tab>('upload');
   const [accountId, setAccountId] = useState('');
   const accounts = useQuery(async () => {
     const res = await api.youtubeAccounts();
@@ -209,38 +173,45 @@ function YoutubeContent() {
     return list;
   });
   const list = accounts.data ?? [];
-  const connected = params.get('connected');
-  const oauthError = params.get('error');
 
   return (
     <>
-      <PageHeader title="YouTube" description="Conecta tu canal para subir videos y consultar estadísticas a través de ms-youtube." />
-      {connected && <div className="alert alert-success">Cuenta conectada: {connected}</div>}
-      {oauthError && <div className="alert alert-danger">{oauthError}</div>}
-      <ErrorBox message={accounts.error} onRetry={accounts.reload} />
-
-      <Tabs
-        tabs={[
-          { id: 'accounts', label: 'Cuentas' },
-          { id: 'upload', label: 'Subir video' },
-          { id: 'stats', label: 'Estadísticas' },
-          { id: 'analytics', label: 'Analíticas' },
-        ]}
-        value={tab}
-        onChange={setTab}
+      <PageHeader
+        title="Publicar"
+        description="Sube videos a tus canales conectados y consulta estadísticas puntuales. Las cuentas se gestionan en Canales."
       />
-      {tab === 'accounts' && <AccountsTab accounts={list} loading={accounts.loading} onReload={accounts.reload} />}
-      {tab === 'upload' && <UploadTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
-      {tab === 'stats' && <StatsTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
-      {tab === 'analytics' && <AnalyticsTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
-    </>
-  );
-}
+      <ErrorBox message={accounts.error} onRetry={accounts.reload} />
+      {accounts.loading && !accounts.data && <Spinner label="Cargando cuentas conectadas…" />}
 
-export default function YoutubePage() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <YoutubeContent />
-    </Suspense>
+      {accounts.data && list.length === 0 && (
+        <Card>
+          <Empty icon="play" title="No hay canales conectados">
+            Conecta tu canal con Google para subir videos y ver estadísticas.
+            <div style={{ marginTop: 12 }}>
+              <Link href="/channels">
+                <Button variant="primary">Ir a Canales</Button>
+              </Link>
+            </div>
+          </Empty>
+        </Card>
+      )}
+
+      {list.length > 0 && (
+        <>
+          <Tabs
+            tabs={[
+              { id: 'upload', label: 'Subir video' },
+              { id: 'stats', label: 'Estadísticas de un video' },
+              { id: 'analytics', label: 'Analíticas' },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+          {tab === 'upload' && <UploadTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
+          {tab === 'stats' && <StatsTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
+          {tab === 'analytics' && <AnalyticsTab accounts={list} accountId={accountId} setAccountId={setAccountId} />}
+        </>
+      )}
+    </>
   );
 }

@@ -6,11 +6,11 @@ import { Icon, type IconName } from './Icon';
 
 const LINKS: Array<{ href: string; label: string; icon: IconName }> = [
   { href: '/', label: 'Panel', icon: 'home' },
+  { href: '/channels', label: 'Canales', icon: 'play' },
   { href: '/extract', label: 'Extraer', icon: 'extract' },
   { href: '/results', label: 'Resultados', icon: 'list' },
-  { href: '/sensor', label: 'Sensor', icon: 'clock' },
   { href: '/media', label: 'Media Hub', icon: 'image' },
-  { href: '/youtube', label: 'YouTube', icon: 'play' },
+  { href: '/youtube', label: 'Publicar', icon: 'upload' },
   { href: '/core', label: 'Base de datos', icon: 'database' },
 ];
 

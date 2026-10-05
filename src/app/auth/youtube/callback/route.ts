@@ -6,12 +6,12 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Destino del redirect de Google OAuth (GOOGLE_REDIRECT_URI de ms-youtube debe apuntar aquí).
- * Reenvía el `code` a ms-youtube desde el servidor y vuelve a /youtube.
+ * Reenvía el `code` a ms-youtube desde el servidor y vuelve a /channels.
  */
 export async function GET(req: NextRequest) {
   const back = (params: Record<string, string>) => {
     const url = req.nextUrl.clone();
-    url.pathname = '/youtube';
+    url.pathname = '/channels';
     url.search = new URLSearchParams(params).toString();
     return NextResponse.redirect(url);
   };

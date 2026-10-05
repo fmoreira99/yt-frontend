@@ -57,7 +57,8 @@ const UPLOAD_TIMEOUT_MS = 30 * 60_000;
 // Render (plan gratuito) duerme el servicio tras 15 min sin uso y responde 502/503/504 mientras despierta (20-60 s).
 const WAKING_STATUSES = new Set([502, 503, 504]);
 const WAKE_RETRY_DELAY_MS = 6_000;
-const MAX_WAKE_RETRIES = 8;
+// Cadena de arranque en frío: frontend -> extractor -> core (~25 s cada uno).
+const MAX_WAKE_RETRIES = 14;
 const HEALTH_DEADLINE_MS = 75_000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

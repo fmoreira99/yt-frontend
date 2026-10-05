@@ -73,8 +73,16 @@ const STATUS_TONES: Record<string, 'success' | 'warning' | 'danger' | 'info' | u
   down: 'danger', failed: 'danger', error: 'danger',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  success: 'Correcto',
+  failed: 'Fallido',
+  running: 'En curso',
+  pending: 'Pendiente',
+  skipped: 'Omitido',
+};
+
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
-  return <Badge tone={STATUS_TONES[status]}>{label ?? status.replaceAll('_', ' ')}</Badge>;
+  return <Badge tone={STATUS_TONES[status]}>{label ?? STATUS_LABELS[status] ?? status.replaceAll('_', ' ')}</Badge>;
 }
 
 export function Spinner({ label }: { label?: string }) {

@@ -9,6 +9,14 @@ Frontend en Next.js para usar los microservicios desplegados:
 | `ms-media-hub` (Supabase Edge Function) | Búsqueda de media, generación con IA, estado de proveedores | `Authorization: Bearer` |
 | `ms-youtube` | Conectar canal (OAuth), subir/eliminar videos, estadísticas y analíticas | JWT HS256 firmado por el servidor |
 
+## Módulos
+
+- **Canales**: un solo lugar para añadir, monitorear y administrar canales. Une los canales monitoreados (extractor + core)
+  con los conectados a Google (ms-youtube). Cada canal muestra su estado; al abrirlo hay resumen con estadísticas diarias,
+  videos, automatización (frecuencia, pausar/reanudar, escanear ahora, historial) y descargas en CSV/JSON.
+- **Extraer / Resultados**: extracción puntual de videos y consulta de lo guardado.
+- **Media Hub**, **Publicar** (subir videos) y **Base de datos** (cuentas y registro de tareas).
+
 ## Arquitectura
 
 Los servicios usan claves internas y no tienen CORS, así que **el navegador nunca los llama directamente**.
