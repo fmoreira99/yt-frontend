@@ -9,6 +9,7 @@ import type { StoredResult } from '@/lib/types';
 import { Button, Card, ErrorBox } from '../ui';
 import { useToast } from '../Toast';
 import type { TabProps } from './ChannelDrawer';
+import { ReportsCard } from './ReportsCard';
 
 const METRIC_LABELS: Record<string, string> = {
   views: 'vistas',
@@ -132,6 +133,8 @@ export function DataTab({ channel }: TabProps) {
           )}
         </div>
       </Card>
+
+      {canAnalytics && <ReportsCard channel={channel} />}
     </div>
   );
 }

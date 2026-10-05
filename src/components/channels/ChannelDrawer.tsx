@@ -15,11 +15,12 @@ export interface TabProps {
   channel: Channel;
   videos: StoredResult[];
   onChanged: () => void;
+  onClose: () => void;
 }
 
 type TabId = 'summary' | 'videos' | 'automation' | 'data';
 
-export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps & { onClose: () => void }) {
+export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps) {
   const [tab, setTab] = useState<TabId>('summary');
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -79,10 +80,10 @@ export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps 
         </header>
 
         <div className="drawer-body">
-          {tab === 'summary' && <SummaryTab channel={channel} videos={videos} onChanged={onChanged} />}
-          {tab === 'videos' && <VideosTab channel={channel} videos={videos} onChanged={onChanged} />}
-          {tab === 'automation' && <AutomationTab channel={channel} videos={videos} onChanged={onChanged} />}
-          {tab === 'data' && <DataTab channel={channel} videos={videos} onChanged={onChanged} />}
+          {tab === 'summary' && <SummaryTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
+          {tab === 'videos' && <VideosTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
+          {tab === 'automation' && <AutomationTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
+          {tab === 'data' && <DataTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
         </div>
       </div>
     </div>

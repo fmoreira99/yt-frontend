@@ -24,6 +24,7 @@ const RULES: Record<Service, Rule[]> = {
     { method: 'POST', path: /^sensor\/schedule$/ },
     { method: 'POST', path: /^sensor\/trigger-now$/ },
     { method: 'DELETE', path: /^sensor\/schedule\/[^/]+$/ },
+    { method: 'DELETE', path: /^sensor\/channels\/[^/]+$/ },
   ],
   core: [
     { method: 'GET', path: /^accounts$/ },
@@ -37,10 +38,16 @@ const RULES: Record<Service, Rule[]> = {
   youtube: [
     { method: 'GET', path: /^auth\/url$/ },
     { method: 'GET', path: /^auth\/accounts$/ },
+    { method: 'DELETE', path: /^auth\/accounts\/[\w-]+$/ },
     { method: 'POST', path: /^videos\/upload$/ },
     { method: 'DELETE', path: /^videos\/[\w-]+$/ },
     { method: 'GET', path: /^analytics\/videos\/[\w-]+\/stats$/ },
     { method: 'GET', path: /^analytics\/channel$/ },
+    { method: 'GET', path: /^reports\/types$/ },
+    { method: 'GET', path: /^reports\/jobs$/ },
+    { method: 'POST', path: /^reports\/jobs$/ },
+    { method: 'GET', path: /^reports\/jobs\/[\w.-]+\/reports$/ },
+    { method: 'GET', path: /^reports\/jobs\/[\w.-]+\/reports\/[\w.-]+\/download$/ },
   ],
 };
 

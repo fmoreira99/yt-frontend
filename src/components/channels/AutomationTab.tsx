@@ -8,11 +8,13 @@ import { formatDate, formatRelative } from '@/lib/format';
 import { Badge, Button, Card, Empty, ErrorBox, Field, Spinner, StatusBadge } from '../ui';
 import { useToast } from '../Toast';
 import type { TabProps } from './ChannelDrawer';
+import { ManageCard } from './ManageCard';
 
 const VIDEO_COUNTS = [5, 10, 20, 50];
 const TRIGGERS: Record<string, string> = { cron: 'programado', manual: 'manual', on_demand: 'a demanda' };
 
-export function AutomationTab({ channel, onChanged }: TabProps) {
+export function AutomationTab(props: TabProps) {
+  const { channel, onChanged } = props;
   const toast = useToast();
   const monitor = channel.monitor;
   const [custom, setCustom] = useState(monitor?.cron ?? DEFAULT_CRON);
@@ -50,15 +52,18 @@ export function AutomationTab({ channel, onChanged }: TabProps) {
 
   if (!monitor) {
     return (
-      <Empty icon="clock" title="Este canal no se monitorea">
-        Actívalo para revisar automáticamente si hay videos nuevos y analizarlos.
-        <div style={{ marginTop: 12 }}>
-          <Button variant="primary" loading={save.loading} onClick={() => void save.run(DEFAULT_CRON, 10, 'Monitoreo activado')}>
-            Monitorear este canal
-          </Button>
-        </div>
-        <ErrorBox message={save.error} />
-      </Empty>
+      <div className="stack-lg">
+        <Empty icon="clock" title="Este canal no se monitorea">
+          Actívalo para revisar automáticamente si hay videos nuevos y analizarlos.
+          <div style={{ marginTop: 12 }}>
+            <Button variant="primary" loading={save.loading} onClick={() => void save.run(DEFAULT_CRON, 10, 'Monitoreo activado')}>
+              Monitorear este canal
+            </Button>
+          </div>
+          <ErrorBox message={save.error} />
+        </Empty>
+        <ManageCard {...props} />
+      </div>
     );
   }
 
@@ -193,6 +198,7 @@ export function AutomationTab({ channel, onChanged }: TabProps) {
           {logs.data && history.length === 0 && <p className="small muted">Todavía no hay ejecuciones registradas.</p>}
         </div>
       </Card>
+      <ManageCard {...props} />
     </div>
   );
 }

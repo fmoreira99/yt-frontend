@@ -211,6 +211,22 @@ export interface ChannelAnalytics {
   rows: (string | number)[][];
 }
 
+export interface ReportJob {
+  id: string;
+  name: string;
+  reportTypeId: string;
+  createTime?: string;
+  expireTime?: string;
+}
+
+export interface ReportFile {
+  id: string;
+  jobId: string;
+  startTime: string;
+  endTime: string;
+  createTime: string;
+}
+
 /* ---------- salud ---------- */
 export interface ServiceHealth {
   status: 'ok' | 'down' | 'not_configured';

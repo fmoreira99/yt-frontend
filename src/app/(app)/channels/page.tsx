@@ -55,7 +55,8 @@ function ChannelsContent() {
   const reloadStatus = useCallback(() => {
     void accounts.reload();
     void schedules.reload();
-  }, [accounts, schedules]);
+    void youtube.reload();
+  }, [accounts, schedules, youtube]);
 
   // Avisa si la carga inicial tarda (servicios dormidos en Render).
   useEffect(() => {

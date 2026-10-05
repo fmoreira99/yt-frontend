@@ -9,6 +9,8 @@ import type {
   MediaProvider,
   Pagination,
   ReanalysisSummary,
+  ReportFile,
+  ReportJob,
   ScheduleStatus,
   SearchResponse,
   ServiceHealth,
@@ -51,6 +53,14 @@ function fail(status: number, text: string): never {
   throw new ApiError(body.error?.code ?? `HTTP_${status}`, body.error?.message ?? `Error ${status}`, status);
 }
 
+/** Como `call`, pero devuelve el cuerpo tal cual (descarga de CSV). */
+async function callText(path: string, init: { query?: Query } = {}): Promise<string> {
+  const res = await fetch(`/api/${path}${toSearch(init.query)}`);
+  const text = await res.text();
+  if (!res.ok) fail(res.status, text);
+  return text;
+}
+
 async function call<T>(path: string, init: { method?: string; query?: Query; json?: unknown } = {}): Promise<T> {
   const res = await fetch(`/api/${path}${toSearch(init.query)}`, {
     method: init.method ?? 'GET',
@@ -80,6 +90,10 @@ export const api = {
     call<{ schedule: ScheduleStatus }>('extractor/sensor/schedule', { method: 'POST', json: body }),
   triggerNow: (body: { channel_id: string; max_videos?: number; skip_duplicate_check?: boolean }) =>
     call<{ status: string; channel_id: string }>('extractor/sensor/trigger-now', { method: 'POST', json: body }),
+  deleteChannel: (channel: string) =>
+    call<{ status: string; channel_id: string }>(`extractor/sensor/channels/${encodeURIComponent(channel)}`, {
+      method: 'DELETE',
+    }),
   removeSchedule: (channel: string) =>
     call<{ status: string; channel_id: string }>(`extractor/sensor/schedule/${encodeURIComponent(channel)}`, {
       method: 'DELETE',
@@ -110,6 +124,20 @@ export const api = {
     }),
   youtubeChannelAnalytics: (query: { accountId: string; startDate: string; endDate: string; metrics?: string }) =>
     call<{ data: { analytics: ChannelAnalytics } }>('youtube/analytics/channel', { query }),
+  youtubeDisconnect: (accountId: string) =>
+    call<{ data: { id: string; revoked: boolean; disconnected: boolean } }>(
+      `youtube/auth/accounts/${encodeURIComponent(accountId)}`,
+      { method: 'DELETE' },
+    ),
+  reportJobs: (accountId: string) => call<{ data: { jobs: ReportJob[] } }>('youtube/reports/jobs', { query: { accountId } }),
+  enableReports: (accountId: string) =>
+    call<{ data: { jobs: ReportJob[]; created: string[] } }>('youtube/reports/jobs', { method: 'POST', json: { accountId } }),
+  jobReports: (accountId: string, jobId: string) =>
+    call<{ data: { reports: ReportFile[] } }>(`youtube/reports/jobs/${encodeURIComponent(jobId)}/reports`, { query: { accountId } }),
+  downloadReport: (accountId: string, jobId: string, reportId: string) =>
+    callText(`youtube/reports/jobs/${encodeURIComponent(jobId)}/reports/${encodeURIComponent(reportId)}/download`, {
+      query: { accountId },
+    }),
   youtubeDeleteVideo: (videoId: string, accountId: string) =>
     call<{ data: { videoId: string; deleted: boolean } }>(`youtube/videos/${encodeURIComponent(videoId)}`, {
       method: 'DELETE',
