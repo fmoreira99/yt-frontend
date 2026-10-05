@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { useQuery } from '@/lib/hooks';
+import { useAction, useQuery } from '@/lib/hooks';
+import { wakeServices } from '@/lib/wake';
 import { formatMs } from '@/lib/format';
 import { Button, Card, Empty, ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
 import { VideoCard } from '@/components/VideoCard';
@@ -15,21 +17,40 @@ const SERVICES = [
 ] as const;
 
 function ServiceCard({ id, name, description, href }: (typeof SERVICES)[number]) {
-  const { data, loading } = useQuery(() => api.health(id));
-  const label = loading ? 'Comprobando…' : data?.status === 'ok' ? 'Operativo' : data?.status === 'not_configured' ? 'Sin configurar' : 'Caído';
+  const { data, loading, reload } = useQuery(() => api.health(id));
+  // Las llamadas entre servicios no despiertan a los dormidos en Render: se despierta desde el navegador.
+  const wake = useAction(async () => {
+    await wakeServices();
+    await reload();
+  });
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (data?.status === 'down' && !autoTried.current) {
+      autoTried.current = true;
+      void wake.run();
+    }
+  }, [data, wake]);
+  const waking = wake.loading;
+  const label = loading || waking ? (waking ? 'Despertando…' : 'Comprobando…') : data?.status === 'ok' ? 'Operativo' : data?.status === 'not_configured' ? 'Sin configurar' : 'Caído';
 
   return (
     <Card className="service-card">
       <div className="row-between">
         <h3>{name}</h3>
-        {loading ? <span className="spinner" /> : <StatusBadge status={data?.status ?? 'down'} label={label} />}
+        {loading || waking ? <span className="spinner" /> : <StatusBadge status={data?.status ?? 'down'} label={label} />}
       </div>
       <p className="muted">{description}</p>
       <div className="row-between">
         <span className="small muted">
-          {loading ? 'Si estaba dormido, puede tardar hasta un minuto' : (data?.detail ?? formatMs(data?.latency_ms))}
+          {loading || waking ? 'Si estaba dormido, puede tardar hasta un minuto' : (data?.detail ?? formatMs(data?.latency_ms))}
         </span>
-        <Link href={href}>Abrir →</Link>
+        {data?.status === 'down' && !waking ? (
+          <Button size="sm" onClick={() => void wake.run()}>
+            Despertar
+          </Button>
+        ) : (
+          <Link href={href}>Abrir →</Link>
+        )}
       </div>
     </Card>
   );
@@ -57,7 +78,13 @@ export default function DashboardPage() {
           <Link href="/results">Ver todos →</Link>
         </div>
         {recent.loading && <Spinner label="Cargando resultados…" />}
-        <ErrorBox message={recent.error} onRetry={recent.reload} />
+        <ErrorBox
+          message={recent.error}
+          onRetry={async () => {
+            await wakeServices();
+            await recent.reload();
+          }}
+        />
         {recent.data && recent.data.data.length === 0 && (
           <Card>
             <Empty icon="extract" title="Aún no hay extracciones">
