@@ -32,7 +32,7 @@ export function Card({ title, actions, children, className }: { title?: string; 
 }
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'ghost-danger';
   size?: 'md' | 'sm';
   icon?: IconName;
   loading?: boolean;

@@ -37,7 +37,7 @@ export default function ResultDetailPage({ params }: { params: Promise<{ videoId
             description={[r.metadata.channel_title, formatDate(r.metadata.published_at)].filter((x) => x !== '—').join(' · ')}
             actions={
               <>
-                <LinkVideoButton videoId={videoId} />
+                <LinkVideoButton videoIds={[videoId]} label="Vincular a canal" />
                 <a href={r.metadata.url} target="_blank" rel="noreferrer">
                   <Button icon="external">Ver en YouTube</Button>
                 </a>

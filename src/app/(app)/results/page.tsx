@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useAction, useQuery } from '@/lib/hooks';
-import { Button, Card, Empty, ErrorBox, Field, PageHeader, Pager, Spinner } from '@/components/ui';
+import { Icon } from '@/components/Icon';
+import { Button, Card, Empty, ErrorBox, PageHeader, Pager, Spinner } from '@/components/ui';
 import { LinkVideoButton } from '@/components/LinkVideoButton';
 import { useToast } from '@/components/Toast';
 import { VideoCard } from '@/components/VideoCard';
 
 const LIMIT = 20;
+const CHANNEL_ID = /^UC[\w-]{22}$/;
 
 export default function ResultsPage() {
   const toast = useToast();
@@ -26,6 +28,7 @@ export default function ResultsPage() {
 
   const rows = results.data?.data ?? [];
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.video_id));
+  const invalidChannel = channel !== '' && !CHANNEL_ID.test(channel);
 
   const remove = useAction(async (ids: string[]) => {
     const what = ids.length === 1 ? 'este video' : `${ids.length} videos`;
@@ -53,56 +56,74 @@ export default function ResultsPage() {
       return next;
     });
 
-  const invalidChannel = channel !== '' && !/^UC[\w-]{22}$/.test(channel);
+  function applyFilter(value: string) {
+    setOffset(0);
+    setSelected(new Set());
+    setApplied(value);
+  }
 
   return (
     <>
-      <PageHeader
-        title="Resultados"
-        description="Videos ya extraídos, del más reciente al más antiguo."
-        actions={
+      <PageHeader title="Resultados" description="Videos ya extraídos, del más reciente al más antiguo." />
+
+      <div className="stack">
+        <div className="toolbar">
+          <form
+            className="row"
+            style={{ gap: 8, flexWrap: 'nowrap', flex: '1 1 320px', maxWidth: 440 }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!invalidChannel) applyFilter(channel);
+            }}
+          >
+            <div className="search">
+              <Icon name="search" size={16} />
+              <input
+                className="input"
+                value={channel}
+                onChange={(e) => setChannel(e.target.value.trim())}
+                placeholder="Filtrar por ID de canal (UC…)"
+                aria-label="Filtrar por ID de canal"
+                aria-invalid={invalidChannel}
+              />
+            </div>
+            <Button type="submit" disabled={invalidChannel || channel === applied}>
+              Filtrar
+            </Button>
+          </form>
           <Button icon="sparkles" loading={analyze.loading} onClick={runAnalysis}>
             Analizar pendientes
           </Button>
-        }
-      />
-
-      {analyze.result && (
-        <div className="alert alert-success">
-          {analyze.result.analyzed.length} analizados
-          {analyze.result.failed.length > 0 && `, ${analyze.result.failed.length} fallidos`}
-          {analyze.result.has_more && ' · quedan más pendientes: vuelve a ejecutarlo'}.
         </div>
-      )}
-      <ErrorBox message={analyze.error} />
-      <ErrorBox message={remove.error} />
-
-      <Card>
-        <form
-          className="row"
-          style={{ alignItems: 'flex-end' }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            setOffset(0);
-            setSelected(new Set());
-            setApplied(channel);
-          }}
-        >
-          <div style={{ flex: '1 1 280px' }}>
-            <Field label="Filtrar por ID de canal" hint={invalidChannel ? 'Formato: UC seguido de 22 caracteres' : undefined}>
-              <input className="input" value={channel} onChange={(e) => setChannel(e.target.value.trim())} placeholder="UCxxxxxxxxxxxxxxxxxxxxxx" />
-            </Field>
+        {invalidChannel && <p className="small" style={{ color: 'var(--danger-fg)' }}>Formato: UC seguido de 22 caracteres.</p>}
+        {applied && (
+          <div className="row" style={{ gap: 8 }}>
+            <span className="small muted">Filtrando por</span>
+            <span className="chip-filter">
+              <span className="mono">{applied}</span>
+              <button type="button" aria-label="Quitar filtro" onClick={() => (setChannel(''), applyFilter(''))}>
+                <Icon name="x" size={14} />
+              </button>
+            </span>
           </div>
-          <Button type="submit" disabled={invalidChannel}>
-            Filtrar
-          </Button>
-        </form>
-      </Card>
+        )}
+
+        {analyze.result && (
+          <div className="alert alert-success">
+            {analyze.result.analyzed.length} analizados
+            {analyze.result.failed.length > 0 && `, ${analyze.result.failed.length} fallidos`}
+            {analyze.result.has_more && ' · quedan más pendientes: vuelve a ejecutarlo'}.
+          </div>
+        )}
+        <ErrorBox message={analyze.error} />
+        <ErrorBox message={remove.error} />
+      </div>
 
       {results.loading && <Spinner label="Cargando…" />}
       <ErrorBox message={results.error} onRetry={results.reload} />
+
       {results.data && (
-        <div className="stack">
+        <div className={`stack${selected.size > 0 ? ' list-selecting' : ''}`}>
           {rows.length === 0 && (
             <Card>
               <Empty icon="list" title="No hay resultados">
@@ -110,23 +131,36 @@ export default function ResultsPage() {
               </Empty>
             </Card>
           )}
-          {rows.length > 0 && (
-            <div className="row-between">
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.video_id)) : new Set())}
-                />
-                {selected.size > 0 ? `${selected.size} seleccionado(s)` : 'Seleccionar todos los de esta página'}
-              </label>
-              {selected.size > 0 && (
-                <Button variant="danger" size="sm" icon="trash" loading={remove.loading} onClick={() => void remove.run([...selected])}>
-                  Eliminar ({selected.size})
-                </Button>
-              )}
-            </div>
-          )}
+
+          {rows.length > 0 &&
+            (selected.size > 0 ? (
+              <div className="selbar" role="region" aria-label="Acciones sobre la selección">
+                <span>
+                  <strong>{selected.size}</strong> {selected.size === 1 ? 'seleccionado' : 'seleccionados'}
+                </span>
+                <div className="selbar-actions">
+                  <LinkVideoButton videoIds={[...selected]} label="Vincular a canal" />
+                  <Button size="sm" variant="danger" icon="trash" loading={remove.loading} onClick={() => void remove.run([...selected])}>
+                    Eliminar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="row-between">
+                <label className="check">
+                  <input type="checkbox" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.video_id)) : new Set())} />
+                  Seleccionar todos
+                </label>
+                <span className="small muted">
+                  {rows.length} {rows.length === 1 ? 'video' : 'videos'}
+                  {offset > 0 && ` · desde el ${offset + 1}`}
+                </span>
+              </div>
+            ))}
+
           {rows.map((r) => (
             <VideoCard
               key={r.video_id}
@@ -137,10 +171,16 @@ export default function ResultsPage() {
               select={{ checked: selected.has(r.video_id), onChange: (on) => toggle(r.video_id, on) }}
               footer={
                 <>
-                  <LinkVideoButton videoId={r.video_id} />
-                  <Button size="sm" variant="ghost" icon="trash" disabled={remove.loading} onClick={() => void remove.run([r.video_id])}>
-                    Eliminar
-                  </Button>
+                  <LinkVideoButton videoIds={[r.video_id]} />
+                  <Button
+                    size="sm"
+                    variant="ghost-danger"
+                    icon="trash"
+                    aria-label="Eliminar video"
+                    title="Eliminar"
+                    disabled={remove.loading}
+                    onClick={() => void remove.run([r.video_id])}
+                  />
                 </>
               }
             />
