@@ -62,8 +62,8 @@ export function AnalyticsCard({ channel }: { channel: Channel }) {
     <Card title="Analíticas de YouTube">
       <div className="stack">
         <p className="small muted">
-          Lo mismo que ves en Studio → Analytics → Modo avanzado: rendimiento por video, retención, CTR, fuentes de tráfico, búsquedas,
-          audiencia y más.
+          Lo que ves en Studio → Analytics → Modo avanzado: rendimiento por video, retención, fuentes de tráfico, búsquedas, audiencia y
+          más. Las impresiones y el CTR de miniaturas solo los entrega YouTube en los reportes diarios automáticos (más abajo).
         </p>
         <div className="seg" role="radiogroup" aria-label="Periodo">
           {RANGES.map((d) => (

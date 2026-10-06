@@ -16,6 +16,7 @@ const LABELS: Array<[string, string]> = [
   ['channel_device_os', 'Dispositivos y sistema'],
   ['channel_playback_location', 'Dónde se reproduce'],
   ['channel_sharing_service', 'Dónde se comparte'],
+  ['channel_reach_basic', 'Alcance: impresiones y CTR'],
 ];
 const labelOf = (job: ReportJob) => LABELS.find(([prefix]) => job.reportTypeId.startsWith(prefix))?.[1] ?? job.name;
 
@@ -82,7 +83,7 @@ export function ReportsCard({ channel }: { channel: Channel }) {
     <Card title="Reportes diarios automáticos">
       <div className="stack">
         <p className="small muted">
-          YouTube prepara solo un reporte por día (resumen por video, fuentes de tráfico, demografía, dispositivos, lugar de reproducción y compartidos) y lo conserva 60 días. Actívalos una vez y
+          YouTube prepara solo un reporte por día (resumen por video, fuentes de tráfico, demografía, dispositivos, lugar de reproducción, compartidos y alcance con impresiones y CTR de miniaturas) y lo conserva 60 días. Actívalos una vez y
           descárgalos cuando quieras; el primero aparece unos 2 días después.
         </p>
         {jobs.loading && !jobs.data && <Spinner label="Consultando YouTube…" />}
