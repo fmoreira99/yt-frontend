@@ -79,6 +79,36 @@ export interface StoredResult {
   transcript?: string;
 }
 
+export type LinkKind = 'channel' | 'video' | 'used';
+
+export interface ChannelLink {
+  id: string;
+  target_channel_id: string;
+  kind: LinkKind;
+  ref_id: string;
+  created_at: string;
+}
+
+export interface InspirationItem {
+  video_id: string;
+  /** `channel`: viene de un canal vinculado; `video`: video suelto vinculado. */
+  source: 'channel' | 'video';
+  used: boolean;
+  /** Primera vez que se monitoreó/extrajo: ordena la cola (el más antiguo sale primero). */
+  first_extracted_at: string;
+  extracted_at: string;
+  metadata: VideoMetadata;
+  analysis: VideoAnalysis | null;
+  transcript_available: boolean;
+  transcript_chars: number;
+}
+
+export interface InspirationResponse {
+  data: InspirationItem[];
+  pagination: { limit: number; offset: number; count: number; total: number };
+  counts: { pending: number; used: number };
+}
+
 export interface Pagination {
   limit: number;
   offset: number;

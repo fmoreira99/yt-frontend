@@ -17,7 +17,10 @@ Frontend en Next.js para usar los microservicios desplegados:
   En **Datos**, los canales conectados a Google descargan las analíticas de YouTube (lo de Studio → Modo avanzado): un CSV por
   reporte (rendimiento por video, fuentes de tráfico, búsquedas, retención, países, dispositivos…) o un **paquete JSON para IA**
   con todo junto y los videos extraídos. Periodos de 7 días a "Todo" el historial.
-- **Extraer / Resultados**: extracción puntual de videos y consulta de lo guardado.
+- **Inspiración** (pestaña de cada canal): vincula uno o varios canales que monitoreas a tu canal y sus guiones llegan a una cola,
+  del primero que se monitoreó al más reciente; marca los que ya usaste. También se pueden vincular videos sueltos desde Extraer
+  o Resultados. Es opcional.
+- **Extraer / Resultados**: extracción puntual de videos y consulta de lo guardado. En Resultados se puede eliminar (uno o varios).
 - **Media Hub**, **Publicar** (subir videos) y **Base de datos** (cuentas y registro de tareas).
 
 ## Arquitectura

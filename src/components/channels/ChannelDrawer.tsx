@@ -8,6 +8,7 @@ import { Button, CopyButton, Tabs } from '../ui';
 import { Avatar, StateBadge } from './ChannelCard';
 import { AutomationTab } from './AutomationTab';
 import { DataTab } from './DataTab';
+import { InspirationTab } from './InspirationTab';
 import { SummaryTab } from './SummaryTab';
 import { VideosTab } from './VideosTab';
 
@@ -18,9 +19,9 @@ export interface TabProps {
   onClose: () => void;
 }
 
-type TabId = 'summary' | 'videos' | 'automation' | 'data';
+type TabId = 'summary' | 'videos' | 'inspiration' | 'automation' | 'data';
 
-export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps) {
+export function ChannelDrawer({ channel, channels, videos, onClose, onChanged }: TabProps & { channels: Channel[] }) {
   const [tab, setTab] = useState<TabId>('summary');
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +72,7 @@ export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps)
             tabs={[
               { id: 'summary', label: 'Resumen' },
               { id: 'videos', label: `Videos${videos.length ? ` (${videos.length})` : ''}` },
+              { id: 'inspiration', label: 'Inspiración' },
               { id: 'automation', label: 'Automatización' },
               { id: 'data', label: 'Datos' },
             ]}
@@ -82,6 +84,7 @@ export function ChannelDrawer({ channel, videos, onClose, onChanged }: TabProps)
         <div className="drawer-body">
           {tab === 'summary' && <SummaryTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
           {tab === 'videos' && <VideosTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
+          {tab === 'inspiration' && <InspirationTab channel={channel} channels={channels} />}
           {tab === 'automation' && <AutomationTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
           {tab === 'data' && <DataTab channel={channel} videos={videos} onChanged={onChanged} onClose={onClose} />}
         </div>

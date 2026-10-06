@@ -4,14 +4,32 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { useAction } from '@/lib/hooks';
 import { Badge, Button, Card, ErrorBox, Field, PageHeader, Tabs } from '@/components/ui';
+import { LinkPicker } from '@/components/LinkPicker';
 import { VideoCard } from '@/components/VideoCard';
+import { linkAll } from '@/lib/links';
 import type { ExtractVideosResponse } from '@/lib/types';
 
 function VideosTab() {
   const [text, setText] = useState('');
   const [skipDuplicates, setSkipDuplicates] = useState(false);
   const [requireTranscript, setRequireTranscript] = useState(true);
-  const extract = useAction(api.extractVideos);
+  const [targets, setTargets] = useState<string[]>([]);
+  const [linkNote, setLinkNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const extract = useAction(async (body: Parameters<typeof api.extractVideos>[0]) => {
+    setLinkNote(null);
+    const res = await api.extractVideos(body);
+    // Vincular es opcional: si falla, la extracción ya está guardada y no se pierde el resultado.
+    const ids = [...res.extracted.map((v) => v.video_id), ...res.skipped];
+    if (targets.length && ids.length) {
+      try {
+        await linkAll(targets, 'video', ids);
+        setLinkNote({ tone: 'success', text: `${ids.length} video(s) vinculados a ${targets.length} canal(es). Aparecen en su cola de inspiración.` });
+      } catch (err) {
+        setLinkNote({ tone: 'danger', text: `Se extrajo, pero no se pudo vincular: ${err instanceof Error ? err.message : 'error desconocido'}. Puedes vincular desde Resultados.` });
+      }
+    }
+    return res;
+  });
 
   const urls = text.split(/[\s,]+/).filter(Boolean);
   const result: ExtractVideosResponse | null = extract.result;
@@ -39,6 +57,7 @@ function VideosTab() {
               Exigir guion
             </label>
           </div>
+          <LinkPicker value={targets} onChange={setTargets} hint="Los videos aparecerán en la cola de inspiración de esos canales." />
           <div className="row">
             <Button type="submit" variant="primary" icon="extract" loading={extract.loading} disabled={!urls.length || urls.length > 25}>
               Extraer {urls.length > 0 && `(${urls.length})`}
@@ -49,6 +68,7 @@ function VideosTab() {
       </Card>
 
       <ErrorBox message={extract.error} />
+      {linkNote && <div className={`alert alert-${linkNote.tone}`}>{linkNote.text}</div>}
       {result && (
         <div className="stack">
           <div className="row">
@@ -79,7 +99,22 @@ function ChannelTab() {
   const [channel, setChannel] = useState('');
   const [maxVideos, setMaxVideos] = useState('10');
   const [skipDuplicates, setSkipDuplicates] = useState(false);
-  const scan = useAction(api.extractChannel);
+  const [targets, setTargets] = useState<string[]>([]);
+  const [linkNote, setLinkNote] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const scan = useAction(async (body: Parameters<typeof api.extractChannel>[0]) => {
+    setLinkNote(null);
+    const res = await api.extractChannel(body);
+    if (targets.length) {
+      try {
+        // El canal entero pasa a ser fuente de inspiración: también entrarán sus videos futuros.
+        await linkAll(targets, 'channel', [res.channel_id]);
+        setLinkNote({ tone: 'success', text: `Canal vinculado a ${targets.length} canal(es) tuyos. Sus videos extraídos están en la cola de inspiración.` });
+      } catch (err) {
+        setLinkNote({ tone: 'danger', text: `Se escaneó, pero no se pudo vincular: ${err instanceof Error ? err.message : 'error desconocido'}.` });
+      }
+    }
+    return res;
+  });
   const summary = scan.result;
 
   return (
@@ -104,6 +139,7 @@ function ChannelTab() {
             <input type="checkbox" checked={skipDuplicates} onChange={(e) => setSkipDuplicates(e.target.checked)} />
             Re-extraer aunque ya exista
           </label>
+          <LinkPicker value={targets} onChange={setTargets} label="Usar como inspiración de mis canales (opcional)" hint="Sus guiones aparecerán en la cola de esos canales." />
           <div className="row">
             <Button type="submit" variant="primary" icon="search" loading={scan.loading} disabled={!channel.trim()}>
               Escanear canal
@@ -114,6 +150,7 @@ function ChannelTab() {
       </Card>
 
       <ErrorBox message={scan.error} />
+      {linkNote && <div className={`alert alert-${linkNote.tone}`}>{linkNote.text}</div>}
       {summary && (
         <div className="stack">
           <div className="row">

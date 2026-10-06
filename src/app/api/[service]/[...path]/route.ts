@@ -12,4 +12,4 @@ async function handle(req: Request, { params }: Ctx): Promise<Response> {
   return forward(service as Service, path, req);
 }
 
-export { handle as GET, handle as POST, handle as DELETE };
+export { handle as GET, handle as POST, handle as PUT, handle as DELETE };

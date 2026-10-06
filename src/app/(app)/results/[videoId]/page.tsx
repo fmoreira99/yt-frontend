@@ -2,15 +2,26 @@
 
 import { use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAction, useQuery } from '@/lib/hooks';
 import { formatDate, formatDuration, formatNumber } from '@/lib/format';
 import { Badge, Button, Card, Chips, CopyButton, ErrorBox, PageHeader, Spinner } from '@/components/ui';
+import { LinkVideoButton } from '@/components/LinkVideoButton';
+import { useToast } from '@/components/Toast';
 
 export default function ResultDetailPage({ params }: { params: Promise<{ videoId: string }> }) {
   const { videoId } = use(params);
   const query = useQuery(() => api.getResult(videoId), [videoId]);
   const analyze = useAction(api.analyzePending);
+  const router = useRouter();
+  const toast = useToast();
+  const remove = useAction(async () => {
+    if (!window.confirm('¿Eliminar este video?\n\nSe borran su extracción, guion y análisis, y los vínculos a tus canales. Podrás volver a extraerlo.')) return;
+    await api.deleteResult(videoId);
+    toast.success('Video eliminado');
+    router.push('/results');
+  });
   const r = query.data?.data;
 
   return (
@@ -25,11 +36,18 @@ export default function ResultDetailPage({ params }: { params: Promise<{ videoId
             title={r.metadata.title}
             description={[r.metadata.channel_title, formatDate(r.metadata.published_at)].filter((x) => x !== '—').join(' · ')}
             actions={
-              <a href={r.metadata.url} target="_blank" rel="noreferrer">
-                <Button icon="external">Ver en YouTube</Button>
-              </a>
+              <>
+                <LinkVideoButton videoId={videoId} />
+                <a href={r.metadata.url} target="_blank" rel="noreferrer">
+                  <Button icon="external">Ver en YouTube</Button>
+                </a>
+                <Button variant="danger" icon="trash" loading={remove.loading} onClick={() => void remove.run()}>
+                  Eliminar
+                </Button>
+              </>
             }
           />
+          <ErrorBox message={remove.error} />
 
           <div className="grid">
             <Card><div className="muted small">Vistas</div><div className="stat-value">{formatNumber(r.metadata.view_count)}</div></Card>

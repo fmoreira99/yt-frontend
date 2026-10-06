@@ -5,13 +5,13 @@ export type Service = 'extractor' | 'core' | 'media' | 'youtube';
 export const SERVICES: Service[] = ['extractor', 'core', 'media', 'youtube'];
 
 interface Rule {
-  method: 'GET' | 'POST' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   path: RegExp;
 }
 
 /**
  * Lista blanca de lo que el navegador puede pedir. Deliberadamente NO incluye
- * `GET core/accounts/:id` (devuelve tokens descifrados) ni las escrituras directas al core.
+ * `GET core/accounts/:id` (devuelve tokens descifrados) ni escrituras al core salvo los vínculos entre canales.
  */
 const RULES: Record<Service, Rule[]> = {
   extractor: [
@@ -25,10 +25,16 @@ const RULES: Record<Service, Rule[]> = {
     { method: 'POST', path: /^sensor\/trigger-now$/ },
     { method: 'DELETE', path: /^sensor\/schedule\/[^/]+$/ },
     { method: 'DELETE', path: /^sensor\/channels\/[^/]+$/ },
+    { method: 'DELETE', path: /^results\/[\w-]{11}$/ },
+    { method: 'GET', path: /^inspiration$/ },
+    { method: 'POST', path: /^inspiration\/used$/ },
   ],
   core: [
     { method: 'GET', path: /^accounts$/ },
     { method: 'GET', path: /^jobs\/logs\/[\w.-]+$/ },
+    { method: 'GET', path: /^links$/ },
+    { method: 'PUT', path: /^links$/ },
+    { method: 'DELETE', path: /^links$/ },
   ],
   media: [
     { method: 'GET', path: /^providers$/ },
@@ -242,7 +248,7 @@ export async function forward(service: Service, segments: string[], req: Request
   if (!allowed) return errorResponse(404, 'NOT_ALLOWED', 'Ruta no permitida');
 
   const isUpload = service === 'youtube' && path === 'videos/upload';
-  const hasBody = req.method === 'POST';
+  const hasBody = req.method === 'POST' || req.method === 'PUT';
   return callUpstream(service, segments.map(encodeURIComponent).join('/'), {
     method: req.method,
     search: new URL(req.url).search,

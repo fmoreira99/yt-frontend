@@ -3,12 +3,15 @@ import type {
   AnalyticsCatalogItem,
   AnalyticsReport,
   ChannelAnalytics,
+  ChannelLink,
   ChannelScanSummary,
   CoreAccount,
   ExtractVideosResponse,
   GenerateResponse,
+  InspirationResponse,
   JobLog,
   JobStatus,
+  LinkKind,
   MediaProvider,
   Pagination,
   ReanalysisSummary,
@@ -103,6 +106,19 @@ export const api = {
     }),
 
   /* core-db-service */
+  deleteResult: (videoId: string) =>
+    call<{ status: string; video_id: string; deleted_rows: number }>(`extractor/results/${encodeURIComponent(videoId)}`, {
+      method: 'DELETE',
+    }),
+  inspiration: (query: { target: string; state?: 'pending' | 'used' | 'all'; limit?: number; offset?: number }) =>
+    call<InspirationResponse>('extractor/inspiration', { query }),
+  setInspirationUsed: (target: string, videoId: string, used: boolean) =>
+    call<{ status: string }>('extractor/inspiration/used', { method: 'POST', json: { target, video_id: videoId, used } }),
+  listLinks: (target: string) => call<{ data: ChannelLink[] }>('core/links', { query: { target } }),
+  link: (target: string, kind: LinkKind, ref: string) =>
+    call<{ data: ChannelLink }>('core/links', { method: 'PUT', json: { target_channel_id: target, kind, ref_id: ref } }),
+  unlink: (target: string, kind: LinkKind, ref: string) =>
+    call<{ data: { deleted: number } }>('core/links', { method: 'DELETE', query: { target, kind, ref } }),
   coreAccounts: () => call<{ data: CoreAccount[] }>('core/accounts'),
   jobLogs: (service: string, query: { limit?: number; offset?: number; status?: JobStatus | '' }) =>
     call<{ data: JobLog[]; pagination: Pagination }>(`core/jobs/logs/${encodeURIComponent(service)}`, { query }),

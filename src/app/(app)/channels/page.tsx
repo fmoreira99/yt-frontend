@@ -245,6 +245,7 @@ function ChannelsContent() {
       {selected && (
         <ChannelDrawer
           channel={selected}
+          channels={channels}
           videos={(allResults ?? []).filter((r) => r.metadata.channel_id === selected.id)}
           onClose={close}
           onChanged={reloadStatus}
