@@ -8,10 +8,16 @@ export const dynamic = 'force-dynamic';
  * Destino del redirect de Google OAuth (GOOGLE_REDIRECT_URI de ms-youtube debe apuntar aquí).
  * Reenvía el `code` a ms-youtube desde el servidor y vuelve a /channels.
  */
+// Tras el proxy de Render, req.url apunta al puerto interno (localhost:10000): el origen público viene en X-Forwarded-*.
+function publicOrigin(req: NextRequest) {
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host;
+  const proto = req.headers.get('x-forwarded-proto')?.split(',')[0].trim() ?? req.nextUrl.protocol.replace(':', '');
+  return `${proto}://${host}`;
+}
+
 export async function GET(req: NextRequest) {
   const back = (params: Record<string, string>) => {
-    const url = req.nextUrl.clone();
-    url.pathname = '/channels';
+    const url = new URL('/channels', publicOrigin(req));
     url.search = new URLSearchParams(params).toString();
     return NextResponse.redirect(url);
   };
