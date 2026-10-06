@@ -1,4 +1,7 @@
 import type {
+  AnalyticsBundle,
+  AnalyticsCatalogItem,
+  AnalyticsReport,
   ChannelAnalytics,
   ChannelScanSummary,
   CoreAccount,
@@ -124,6 +127,13 @@ export const api = {
     }),
   youtubeChannelAnalytics: (query: { accountId: string; startDate: string; endDate: string; metrics?: string }) =>
     call<{ data: { analytics: ChannelAnalytics } }>('youtube/analytics/channel', { query }),
+  analyticsCatalog: () => call<{ data: { reports: AnalyticsCatalogItem[] } }>('youtube/analytics/reports'),
+  analyticsReport: (accountId: string, reportId: string, query: { startDate: string; endDate: string; videoId?: string; top?: number }) =>
+    call<{ data: { report: AnalyticsReport } }>(`youtube/analytics/reports/${encodeURIComponent(reportId)}`, {
+      query: { accountId, ...query },
+    }),
+  analyticsBundle: (accountId: string, query: { startDate: string; endDate: string; top?: number }) =>
+    call<{ data: { bundle: AnalyticsBundle } }>('youtube/analytics/bundle', { query: { accountId, ...query } }),
   youtubeDisconnect: (accountId: string) =>
     call<{ data: { id: string; revoked: boolean; disconnected: boolean } }>(
       `youtube/auth/accounts/${encodeURIComponent(accountId)}`,

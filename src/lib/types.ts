@@ -211,6 +211,35 @@ export interface ChannelAnalytics {
   rows: (string | number)[][];
 }
 
+export interface AnalyticsCatalogItem {
+  id: string;
+  label: string;
+  description: string;
+  requiresVideo: boolean;
+}
+
+export interface AnalyticsReport {
+  id: string;
+  label: string;
+  channelId: string;
+  startDate: string;
+  endDate: string;
+  columns: string[];
+  rows: (string | number)[][];
+  skippedMetrics?: string[];
+  notes?: string[];
+}
+
+export interface AnalyticsBundle {
+  generatedAt: string;
+  channelId: string;
+  channelTitle: string;
+  startDate: string;
+  endDate: string;
+  reports: Record<string, AnalyticsReport>;
+  errors: Record<string, string>;
+}
+
 export interface ReportJob {
   id: string;
   name: string;

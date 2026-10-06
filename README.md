@@ -14,6 +14,9 @@ Frontend en Next.js para usar los microservicios desplegados:
 - **Canales**: un solo lugar para añadir, monitorear y administrar canales. Une los canales monitoreados (extractor + core)
   con los conectados a Google (ms-youtube). Cada canal muestra su estado; al abrirlo hay resumen con estadísticas diarias,
   videos, automatización (frecuencia, pausar/reanudar, escanear ahora, historial) y descargas en CSV/JSON.
+  En **Datos**, los canales conectados a Google descargan las analíticas de YouTube (lo de Studio → Modo avanzado): un CSV por
+  reporte (rendimiento por video, fuentes de tráfico, búsquedas, retención, países, dispositivos…) o un **paquete JSON para IA**
+  con todo junto y los videos extraídos. Periodos de 7 días a "Todo" el historial.
 - **Extraer / Resultados**: extracción puntual de videos y consulta de lo guardado.
 - **Media Hub**, **Publicar** (subir videos) y **Base de datos** (cuentas y registro de tareas).
 
